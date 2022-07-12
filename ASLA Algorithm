@@ -1,0 +1,290 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+struct CompareCost {
+    bool operator()(vector<float> v1, vector<float> v2)
+    {
+        return max(v1[0], v1[1]) < max(v2[0], v2[1]);
+    }
+};
+
+int main()
+{
+    float number_of_processors, number_of_buses;
+    cin >> number_of_processors >> number_of_buses;
+    
+    // k is the number of tasks
+    // m is the number of alternate service levels for authentication
+    // n is the number of alternate service levels for confidentiality
+
+    int m, n, k;
+    cin >> m >> n >> k;
+    
+    // sa contains the alternate service levels for authentication
+
+    vector<float> sa(m), sc(n);
+    for(int i = 0; i < m; i++)
+        cin >> sa[i];
+
+    // sc contains the alternate service levels for confidentiality
+
+    for(int i = 0; i < n; i++)
+        cin >> sc[i];
+    
+    //  For each task Ti, oa[i] contains the associated overhead value for authentication service levels
+    //  For each task Ti, oc[i] contains the associated overhead value for confidentiality service levels
+
+    vector<vector<float>> oa(k, vector<float>(m));
+    vector<vector<float>> oc(k, vector<float>(n));
+
+    // e[i] contains the computational requirement of the task Ti to be completed in a period p[i]
+    // authentication weightage of each task is stored in wa[i], confidentiality weightage is (1 - wa[i])
+
+    vector<float> e(k), p(k), wa(k);
+    
+    for(int i = 0; i < k; i++)
+    {
+        for(int j = 0; j < m; j++)
+            cin >> oa[i][j];
+        
+        for(int j = 0; j < n; j++)
+            cin >> oc[i][j];
+            
+        cin >> e[i] >> p[i] >> wa[i];
+    }
+    
+    vector<float> pos (5);
+    priority_queue<vector<float>, vector<vector<float>>, CompareCost> cost;
+    
+    for(int i = 0; i < k; i++)
+    {
+        number_of_processors -= (e[i] + oa[i][0] + oc[i][0]) / p[i];
+        
+        pos[0] = p[i] * wa[i] * (sa[1] - sa[0]) / (oa[i][1] - oa[i][0]);
+        pos[1] = p[i] * (1 - wa[i]) * (sc[1] - sc[0]) / (oc[i][1] - oc[i][0]);
+        pos[2] = i;
+        pos[3] = 1;
+        pos[4] = 1;
+        
+        cost.push(pos);
+    }
+    
+    vector<pair<int, int>> ans (k, {0, 0});
+    
+    while(!cost.empty())
+    {
+        vector<float> top = cost.top();
+        
+        cost.pop();
+        float extra;
+        
+        if(top[0] > top[1])
+        {
+            extra = (oa[top[2]][top[3]] - oa[top[2]][top[3] - 1]) / p[top[2]];
+            if(extra > number_of_processors)
+            {
+                top[0] = 0;
+            }
+            else
+            {
+                number_of_processors -= extra;
+                top[3]++;
+                
+                ans[top[2]].first++;
+                if(top[3] == m)
+                    top[0] = 0;
+                else
+                    top[0] = p[top[2]] * wa[top[2]] * (sa[top[3]] - sa[top[3] - 1]) / (oa[top[2]][top[3]] - oa[top[2]][top[3] - 1]);
+            }
+        }
+        else
+        {
+            extra = (oc[top[2]][top[4]] - oc[top[2]][top[4] - 1]) / p[top[2]];
+            if(extra > number_of_processors)
+            {
+                top[1] = 0;
+            }
+            else
+            {
+                number_of_processors -= extra;
+                top[4]++;
+                
+                ans[top[2]].second++;
+                if(top[4] == n)
+                    top[1] = 0;
+                else
+                    top[1] = p[top[2]] * (1 - wa[top[2]]) * (sc[top[4]] - sc[top[4] - 1]) / (oc[top[2]][top[4]] - oc[top[2]][top[4] - 1]);
+            }
+        }
+        
+        if(max(top[0], top[1]) > 0)
+            cost.push(top);
+    }
+    
+    float quality = 0;
+    for(int i = 0; i < k; i++)
+    {
+        quality += wa[i] * sa[ans[i].first] + (1 - wa[i]) * sc[ans[i].second];
+        cout << ans[i].first << " " << ans[i].second << endl;
+    }
+    
+    cout << quality << endl << endl;
+   
+    
+    // k is the number of messages
+    // m_m is the number of alternate service levels for authentication
+    // n_m is the number of alternate service levels for confidentiality
+    
+    int m_m, n_m;
+    cin >> m_m >> n_m;
+    
+    // sa_m contains the alternate service levels for authentication
+
+    vector<float> sa_m(m_m), sc_m(n_m);
+    for(int i = 0; i < m_m; i++)
+        cin >> sa_m[i];
+        
+    // sc_m contains the alternate service levels for confidentiality
+
+    for(int i = 0; i < n_m; i++)
+        cin >> sc_m[i];
+
+    //  For each message Mi, oa_m[i] contains the associated overhead value for authentication service levels
+    //  For each message Mi, oc_m[i] contains the associated overhead value for confidentiality service levels
+
+    vector<vector<float>> oa_m(k, vector<float>(m_m));
+    vector<vector<float>> oc_m(k, vector<float>(n_m));
+    
+    // e_m[i] contains the computational requirement of the message Mi to be completed in a period p[i] (same as before)
+    // authentication weightage of each message is stored in wa_m[i], confidentiality weightage is (1 - wa_m[i])
+
+    vector<float> e_m(k), wa_m(k);
+    
+    for(int i = 0; i < k; i++)
+    {
+        for(int j = 0; j < m_m; j++)
+            cin >> oa_m[i][j];
+        
+        for(int j = 0; j < n_m; j++)
+            cin >> oc_m[i][j];
+            
+        cin >> e_m[i] >> wa_m[i];
+    }
+    
+    vector<float> pos_m (5);
+    priority_queue<vector<float>, vector<vector<float>>, CompareCost> cost_m;
+    
+    for(int i = 0; i < k; i++)
+    {
+        number_of_buses -= (e_m[i] + oa_m[i][0] + oc_m[i][0]) / p[i];
+        
+        pos_m[0] = p[i] * wa_m[i] * (sa_m[1] - sa_m[0]) / (oa_m[i][1] - oa_m[i][0]);
+        pos_m[1] = p[i] * (1 - wa_m[i]) * (sc_m[1] - sc_m[0]) / (oc_m[i][1] - oc_m[i][0]);
+        pos_m[2] = i;
+        pos_m[3] = 1;
+        pos_m[4] = 1;
+        
+        cost_m.push(pos_m);
+    }
+    
+    vector<pair<int, int>> ans_m (k, {0, 0});
+    
+    while(!cost_m.empty())
+    {
+        vector<float> top = cost_m.top();
+        
+        cost_m.pop();
+        float extra_m;
+        
+        if(top[0] > top[1])
+        {
+            extra_m = (oa_m[top[2]][top[3]] - oa_m[top[2]][top[3] - 1]) / p[top[2]];
+            if(extra_m > number_of_buses)
+            {
+                top[0] = 0;
+            }
+            else
+            {
+                number_of_buses -= extra_m;
+                top[3]++;
+                
+                ans_m[top[2]].first++;
+                if(top[3] == m_m)
+                    top[0] = 0;
+                else
+                    top[0] = p[top[2]] * wa_m[top[2]] * (sa_m[top[3]] - sa_m[top[3] - 1]) / (oa_m[top[2]][top[3]] - oa_m[top[2]][top[3] - 1]);
+            }
+        }
+        else
+        {
+            extra_m = (oc_m[top[2]][top[4]] - oc_m[top[2]][top[4] - 1]) / p[top[2]];
+            if(extra_m > number_of_buses)
+            {
+                top[1] = 0;
+            }
+            else
+            {
+                number_of_buses -= extra_m;
+                top[4]++;
+                
+                ans_m[top[2]].second++;
+                if(top[4] == n)
+                    top[1] = 0;
+                else
+                    top[1] = p[top[2]] * (1 - wa_m[top[2]]) * (sc_m[top[4]] - sc_m[top[4] - 1]) / (oc_m[top[2]][top[4]] - oc_m[top[2]][top[4] - 1]);
+            }
+        }
+        
+        if(max(top[0], top[1]) > 0)
+            cost_m.push(top);
+    }
+    
+    float quality_m = 0;
+    for(int i = 0; i < k; i++)
+    {
+        quality_m += wa_m[i] * sa_m[ans_m[i].first] + (1 - wa_m[i]) * sc_m[ans_m[i].second];
+        cout << ans_m[i].first << " " << ans_m[i].second << endl;
+    }
+    
+    cout << quality_m << endl;
+
+    cout << endl << (quality + quality_m);
+    return 0;
+}
+
+/* INPUT
+2 2
+3 2 2
+1 2 4
+3 5
+0.1 0.3 0.5
+0.4 0.5
+0.1 1 0.7
+0.2 0.4 0.6
+0.3 0.7
+0.2 1 0.4
+2 4
+2 3
+1 4 5 6
+0.1 0.4
+0.1 0.2 0.4 0.8
+0.2 0.8
+0.2 0.3
+0.3 0.5 0.6 0.7
+0.4 0.1
+*/
+
+/* OUTPUT
+2 1
+0 0
+6.5
+
+1 1
+0 1
+7
+
+13.5
+*/
+
+
